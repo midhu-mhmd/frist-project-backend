@@ -1,38 +1,25 @@
-import User from "../models/UserModel.js";
-import jwt from "jsonwebtoken"
-import bcrypt from "bcryptjs"
+import * as userService from "../services/userService.js";
 
-const  registerUser = async (req,res) => {
-    try{
-        const { name, email, password } = req.body 
+const catchAsync = (fn) => (req, res, next) => {
+  fn(req, res, next).catch(next);
+};
 
-        const userExists = await User.findOne({email})
-        if(userExists) return res.status(400).json({ message : "User already exists"})
+export const registerUser = catchAsync(async (req, res) => {
+  const data = await userService.registerUserService(req.body);
+  res.status(201).json(data);
+});
 
-            const hashedpassword = await bcrypt.hash(password,10)
+export const loginUser = catchAsync(async (req, res) => {
+  const data = await userService.loginUserService(req.body);
+  res.status(200).json(data);
+});
 
-            const newUser = await User.create({ name, email, password: hashedpassword})
+export const getUserProfile = catchAsync(async (req, res) => {
+  const data = await userService.getUserProfileService(req.user);
+  res.status(200).json({ user: data });
+});
 
-            const token = jwt.sign({ id: newUser._id },process.env.JWT_SECRET, {expiresIn: "1d"})
-            res.status(201).json({message:"User registered",token})
-    }catch(error){
-        res.status(500).json({message:"error registered user",error:error.message})
-    }
-}
-const loginUser = async (req,res) => {
-    try{
-        const {email,password} = req.body
-
-        const user = await User.findOne({email})
-        if(!user) return res.status(400).json({message:"User not found"})
-
-        const isMatch = await bcrypt.compare(password,user.password)
-        if(!isMatch) return res.status(400).json({message: "Invaild password"})
-        const token = jwt.sign({id: user._id},process.env.JWT_SECRET,{expiresIn: "1d"})
-        res.status(200).json({message:"Login successful",token})
-    }catch(error){
-        res.status(500).json({message:" Error logging in",error:error.message})
-    }
-}
-
-export {registerUser,loginUser}
+export const getAllUsers = catchAsync(async (req, res) => {
+  const users = await userService.getAllUsersService();
+  res.status(200).json(users);
+});
